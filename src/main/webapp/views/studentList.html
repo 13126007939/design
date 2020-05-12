@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>SSM_Design - </title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <link rel="stylesheet" href="//at.alicdn.com/t/font_977780_p6rmctl39h.css" />
+  <link rel="stylesheet" href="../css/reset.css" />
+  <link rel="stylesheet" href="../css/style.css" />
+  <link rel="stylesheet" href="../css/bootstrap.css" />
+  <link rel="stylesheet" href="../plugins/layui/css/layui.css" />
+
+  <style>
+    html {
+      height: 100%;
+    }
+    body {
+      height: 100%;
+      background: #f5f5f5;
+    }
+    .mian {
+      box-sizing: border-box;
+      position: relative;
+      margin: 0 auto;
+      padding: 40px 20px;
+      width: 1140px;
+      height: 100%;
+    }
+    .item {
+      box-sizing: border-box;
+      padding: 10px;
+      min-height: 165px;
+    }
+    .btns {
+      padding: 10px 0;
+      text-align: right;
+    }
+    .page {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+    .layui-laypage a:hover {
+      color: #1E9FFF;
+    }
+    .view-first .mask {
+      background-color: rgba(135, 207, 235, 0.68);
+    }
+    .layui-form-label {
+      width: 100px;
+    }
+
+    .layui-table-view .layui-btn {
+      padding: 4px 18px;
+      height: auto;
+      line-height: normal;
+    }
+
+    body .Review-topic-class .layui-layer-btn1 {
+      border: none;
+      background-color: #E72F17;
+      color: #fff;
+    }
+
+    .layui-table-tool-temp {
+      padding-right: 0;
+    }
+    .form-item {
+      float: left;
+    }
+    .form-item-btns {
+      float: right;
+    }
+
+
+
+  </style>
+
+</head>
+
+<body>
+  <div class="mian clearfix">
+    <div class="layui-form clearfix">
+      <div class="form-item">
+        <label class="layui-form-label">选择院系</label>
+        <div class="layui-input-inline">
+          <select name="" id="college" lay-filter="college"></select>
+        </div>
+      </div>
+      <div class="form-item">
+        <label class="layui-form-label">选择班级</label>
+        <div class="layui-input-inline">
+          <select name="" lay-filter="classInfo" id="classInfo"></select>
+        </div>
+      </div>
+      <div class="form-item form-item-btns">
+        <div class="layui-input-inline">
+          <button id="addStudent" class="layui-btn">添加学生</button>
+          <button id="export" class="layui-btn">导出数据</button>
+        </div>
+      </div>
+    </div>
+    <div id="table" lay-filter="table"></div>
+    <!-- <div id="itemBox" class="clearfix"></div>
+    <div id="page" class="page"></div> -->
+  </div>
+</body>
+
+<script type="text/html" id="expertiseTpl">
+  {{d.expertise?d.expertise.expertiseName:""}}
+</script>
+<script type="text/html" id="collegeTpl">
+  {{d.college?d.college.collegeName:""}}
+</script>
+<script type="text/html" id="toolbar">
+  <button class="layui-btn" lay-event="edit">编辑</button>
+  <button class="layui-btn" lay-event="del">删除</button>
+</script>
+<script type="text/html" id="topToolbar">
+  
+</script>
+
+<script type="text/html" id="addTpl">
+  <form class="layui-form" lay-filter="addForm" style="padding: 20px">
+    <div class="layui-form-item">
+      <label class="layui-form-label">学生姓名：</label>
+      <div class="layui-input-block">
+        <input type="text" class="layui-input" name="studentName" required="" lay-verify="required" />
+      </div>
+    </div>
+    <div class="layui-form-item">
+      <label class="layui-form-label">学生学号：</label>
+      <div class="layui-input-block">
+        <input type="text" class="layui-input" name="studentIdentifier" required="" lay-verify="required" />
+      </div>
+    </div>
+    <div class="layui-form-item">
+      <label class="layui-form-label">学生院系：</label>
+      <div class="layui-input-block">
+        <select name="collegeId" id="">
+          <option value="">请选择</option>
+          {{# layui.each(d.colleges, function(index, item){ }}
+          <option value="{{item.id}}">{{item.collegeName}}</option>
+          {{# }); }}
+        </select>
+      </div>
+    </div>
+    <div class="layui-form-item">
+      <label class="layui-form-label">学生班级：</label>
+      <div class="layui-input-block">
+        <select name="classId" id="">
+          <option value="">请选择</option>
+          {{# layui.each(d.classes, function(index, item){ }}
+          <option value="{{item.id}}">{{item.className}}</option>
+          {{# }); }}
+        </select>
+      </div>
+    </div>
+    <div class="layui-form-item">
+      <label class="layui-form-label">登录密码：</label>
+      <div class="layui-input-block">
+        <input type="text" class="layui-input" name="password" required="" lay-verify="required" />
+      </div>
+    </div>
+    <button id="addBtn" lay-submit lay-filter="add" style="display: none"></button>
+  </form>
+</script>
+
+<script src="../js/jquery-3.2.1.min.js"></script>
+<script src="../js/jquery.cookie.js"></script>
+<script src="../plugins/layui/layui.js"></script>
+<script src="../js/constant.js"></script>
+<script>
+  layui.use(["layer", "form", "laytpl", "laypage", "table"], function () {
+    var layer = layui.layer,
+      form = layui.form,
+      laytpl = layui.laytpl,
+      laypage = layui.laypage,
+      table = layui.table;
+
+    var roleType = $.cookie("roleType"),
+    roleId = $.cookie("roleId");
+
+    if(!roleId) {
+      parent.layer.msg("你好，请先登录！", { icon: 2, btn: ["确定"], time: 0, shade: 0.3, scrollbar: false }, function() {
+        parent.window.location.href = "./views/login.html";
+      });
+    }
+
+    listCollege()
+    .then(function(res) {
+      $.each(res, function(index, item) {
+        $("#college").append('<option value="'+item.id+'">'+item.collegeName+'</option>');
+      });
+      return listClassByCollegeId(res[0].id);
+    }).then(function(res) {
+      $.each(res, function(index, item) {
+        $("#classInfo").append('<option value="'+item.id+'">'+item.className+'</option>');
+      });
+      dataTable.reload({where: {classId: res[0].id}});
+    })
+    .then(function() {
+      form.on("select(college)", function(obj) {
+        listClassByCollegeId(obj.value)
+        .then(function(res2) {
+            $("#classInfo").html("");
+          $.each(res2, function(index, item) {
+            $("#classInfo").append('<option value="'+item.id+'">'+item.className+'</option>');
+          });
+          form.render('select');
+          dataTable.reload({where: {classId: res2[0].id}});
+        })
+      });
+      form.on("select(classInfo)", function(obj) {
+        dataTable.reload({where: {classId: obj.value}});
+        form.render('select');
+      });
+      form.render('select');
+    });
+    var dataTable = table.render({
+      elem: "#table",
+      url: URL + "student/listStudentByCurr",
+      request: {
+        pageName: "page",
+        limitName: "num"
+      },
+      where: {},
+      response: {
+        statusName: "isSuccessful",
+        statusCode: true,
+        // msgName: "",
+        countName: "total",
+        dataName: "list"
+      },
+      page: true,
+      defaultToolbar: ['exports'],
+      // toolbar: "#topToolbar",
+      cols: [[
+        { field: "id", title: "ID", width: 80 },
+        { field: "studentName", title: "学生姓名", width: 120 },
+        { field: "studentIdentifier", title: "学生学号", width: 180 },
+        { field: "", title: "操作", toolbar: "#toolbar" },
+      ]]
+    });
+
+    table.on("tool(table)", function(obj) {
+      var event = obj.event;
+      if(event === "edit") {
+        console.log(obj.data);
+        var data = obj.data;
+        listCollege()
+        .then(function(res) {
+          data.colleges = res;
+          // data.collegeId = res[0].id;
+          return listClassByCollegeId(res[0].id);
+        })
+        .then(function(res) {
+          data.classes = res;
+          // data.classId = res[0].id;
+        })
+        .then(function() {
+          var content = laytpl($("#addTpl").html()).render(data);
+          layer.open({
+            type: 1,
+            scrollbar: false,
+            title: "修改学生信息",
+            content: content,
+            area: ["500px", "480px"],
+            btn: ["提交", "取消"],
+            success: function(index, layero) {
+              form.val("addForm", data);
+              form.render();
+              form.on('submit(add)', function(data){
+                data.field.id = obj.data.id;
+                $.getJSON(URL + "student/updateStudent", data.field)
+                .done(function(res) {
+                  if(res.isSuccessful) {
+                    layer.msg("修改成功！", { time: 1000, end: function(){ layer.closeAll();dataTable.reload() }});
+                  } else {
+                    layer.msg("修改失败！");
+                  }
+                })
+                return false;
+              });
+            },
+            yes: function(index, layero) {
+              $("#addBtn").trigger("click");
+            },
+          });
+        })
+      } else if(event === "del") {
+        layer.confirm('确定要删除该教师信息吗？', {icon: 3, title:'提示'}, function(index){
+          $.getJSON(URL + "student/delStudentById?id=" + obj.data.id)
+          .then(function(res) {
+            if(res.isSuccessful) {
+                layer.msg("删除成功！", { time: 1000, end: function(){ layer.closeAll();dataTable.reload() }});
+              } else {
+                layer.msg("删除失败！");
+              }
+          });
+        });
+      }
+    });
+    
+    $("#addStudent").click(function() {
+      var data = {};
+      listCollege()
+      .then(function(res) {
+        data.colleges = res;
+        // data.collegeId = res[0].id;
+        return listClassByCollegeId(res[0].id);
+      })
+      .then(function(res) {
+        data.classes = res;
+        // data.classId = res[0].id;
+      })
+      .then(function() {
+        var content = laytpl($("#addTpl").html()).render(data);
+        layer.open({
+          type: 1,
+          scrollbar: false,
+          title: "添加教师",
+          content: content,
+          area: ["500px", "480px"],
+          btn: ["提交", "取消"],
+          success: function(index, layero) {
+            // form.val("addForm", data);
+            form.render('select');
+            form.on('submit(add)', function(data){
+              $.getJSON(URL + "student/addStudent", data.field)
+              .done(function(res) {
+                if(res.isSuccessful) {
+                  layer.msg("添加成功！", { time: 1000, end: function(){ layer.closeAll();dataTable.reload() }});
+                } else {
+                  layer.msg("添加失败！");
+                }
+              })
+              return false;
+            });
+          },
+          yes: function(index, layero) {
+            $("#addBtn").trigger("click");
+          },
+        });
+      });
+    });
+    $("#export").click(function() {
+      table.exportFile(dataTable.config.id, data, 'xls');
+    })
+
+    function setDesigntopicInStatusById(id, status) {
+      return $.getJSON(URL + "designtopic/setDesigntopicInStatusById", {
+        id: id,
+        status: status
+      })
+      .done(function(res2) {
+        if(res2.isSuccessful) {
+          layer.msg("审核成功！", { time: 1000, end: function(){ layer.closeAll();dataTable.reload() }});
+        } else {
+          layer.msg("审核失败！");
+        }
+      })
+      .fail(function(err) {
+        layer.msg("服务器响应失败！");
+        console.log(err);
+      });
+    }
+
+    function listCollege() {
+      return $.getJSON(URL + "college/listCollege")
+      .then(function(res) {
+        if(res.isSuccessful) {
+          return res.list;
+        } else {
+
+        }
+      });
+    }
+    function listClassByCollegeId(id) {
+      return $.getJSON(URL + "classInfo/listClassByCollegeId?collegeId="+id)
+      .then(function(res) {
+        if(res.isSuccessful) {
+          return res.list;
+        } else {
+
+        }
+      });
+    }
+  });
+</script>
+
+</html>
